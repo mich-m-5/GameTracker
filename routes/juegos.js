@@ -42,5 +42,16 @@ router.delete("/:id", async (req, res) => {
     res.status(400).json({ message: "Error al eliminar el juego" });
   }
 });
+// GET /api/juegos/ranking?limit=10&by=avgRating
+router.get("/ranking", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const by = req.query.by === "reviewCount" ? "reviewCount" : "avgRating";
+    const ranking = await Juego.find().sort({ [by]: -1 }).limit(limit);
+    res.json(ranking);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener ranking", error });
+  }
+});
 
 module.exports = router;
