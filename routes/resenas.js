@@ -4,10 +4,12 @@ const Resena = require("../models/Resena");
 const Juego = require("../models/Juego");
 const mongoose = require("mongoose");
 
-// Obtener reseñas por juegoId
+
+
+
 router.get("/", async (req, res) => {
   try {
-    const { juegoId } = req.query; // viene del frontend
+    const { juegoId } = req.query; 
     if (!juegoId) return res.status(400).json({ message: "Falta juegoId" });
 
     const resenas = await Resena.find({ juegoId }).sort({ createdAt: -1 });
@@ -17,7 +19,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Agregar reseña
+
+
+
+
 router.post("/", async (req, res) => {
   try {
     const { juegoId, texto, estrellas } = req.body;
@@ -28,7 +33,8 @@ router.post("/", async (req, res) => {
 
     const nueva = await Resena.create({ juegoId, texto, estrellas });
 
-    // Actualizar promedio y conteo en Juego
+
+
     const agregacion = await Resena.aggregate([
       { $match: { juegoId: new mongoose.Types.ObjectId(juegoId) } },
       {
@@ -52,7 +58,10 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Editar reseña
+
+
+
+
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -65,7 +74,10 @@ router.put("/:id", async (req, res) => {
 
     if (!actualizada) return res.status(404).json({ message: "Reseña no encontrada" });
 
-    // Recalcular promedio para el juego
+
+
+
+    
     const juegoId = actualizada.juegoId;
     const agregacion = await Resena.aggregate([
       { $match: { juegoId: new mongoose.Types.ObjectId(juegoId) } },
@@ -83,7 +95,9 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Eliminar reseña
+
+
+
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -93,7 +107,9 @@ router.delete("/:id", async (req, res) => {
     const juegoId = existente.juegoId;
     await Resena.findByIdAndDelete(id);
 
-    // Recalcular promedio para el juego
+
+
+    
     const agregacion = await Resena.aggregate([
       { $match: { juegoId: new mongoose.Types.ObjectId(juegoId) } },
       { $group: { _id: "$juegoId", avg: { $avg: "$estrellas" }, count: { $sum: 1 } } },

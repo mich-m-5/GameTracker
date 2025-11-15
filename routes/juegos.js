@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const Juego = require("../models/Juego");
-const Resena = require("../models/Resena"); // Asegúrate de tener este modelo
+const Resena = require("../models/Resena"); 
 
-// --- Obtener todos los juegos ---
+
 router.get("/", async (req, res) => {
   try {
     const juegos = await Juego.find();
@@ -13,7 +13,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-// --- Agregar un juego ---
+
+
 router.post("/", async (req, res) => {
   try {
     const nuevoJuego = new Juego(req.body);
@@ -24,7 +25,9 @@ router.post("/", async (req, res) => {
   }
 });
 
-// --- Editar un juego ---
+
+
+
 router.put("/:id", async (req, res) => {
   try {
     const actualizado = await Juego.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -34,7 +37,9 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// --- Eliminar un juego ---
+
+
+
 router.delete("/:id", async (req, res) => {
   try {
     await Juego.findByIdAndDelete(req.params.id);
@@ -44,7 +49,9 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// --- Ranking ---
+
+
+
 router.get("/ranking", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
@@ -56,7 +63,9 @@ router.get("/ranking", async (req, res) => {
   }
 });
 
-// --- Obtener reseñas de un juego ---
+
+
+
 router.get("/:id/resenas", async (req, res) => {
   try {
     const juegoId = req.params.id;
@@ -67,7 +76,9 @@ router.get("/:id/resenas", async (req, res) => {
   }
 });
 
-// --- Agregar reseña a un juego ---
+
+
+
 router.post("/:id/resena", async (req, res) => {
   try {
     const juegoId = req.params.id;
@@ -78,7 +89,8 @@ router.post("/:id/resena", async (req, res) => {
     const nuevaResena = new Resena({ juegoId, texto, usuario, estrellas: rating });
     await nuevaResena.save();
 
-    // Actualizar promedio y cantidad de reseñas en Juego
+
+  
     const todas = await Resena.find({ juegoId });
     const avgRating = todas.reduce((acc, r) => acc + r.estrellas, 0) / todas.length;
     const reviewCount = todas.length;
@@ -91,10 +103,14 @@ router.post("/:id/resena", async (req, res) => {
   }
 });
 
-// --- Recalcular ratings y conteo para todos los juegos ---
+
+
+
 router.post("/recalc-ratings", async (req, res) => {
   try {
-    // Agrupar reseñas por juegoId
+    
+
+
     const agg = await Resena.aggregate([
       {
         $group: {
@@ -105,7 +121,8 @@ router.post("/recalc-ratings", async (req, res) => {
       },
     ]);
 
-    // Crear mapa de resultados por juegoId
+
+    
     const map = new Map(agg.map((a) => [String(a._id), a]));
 
     const juegos = await Juego.find();
