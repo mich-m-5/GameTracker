@@ -91,4 +91,56 @@ router.post("/:id/resena", async (req, res) => {
   }
 });
 
+// --- Recalcular ratings y conteo para todos los juegos ---
+router.post("/recalc-ratings", async (req, res) => {
+  try {
+    // Agrupar reseñas por juegoId
+    const agg = await Resena.aggregate([
+      {
+        $group: {
+          _id: "$juegoId",
+          avg: { $avg: "$estrellas" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Crear mapa de resultados por juegoId
+    const map = new Map(agg.map((a) => [String(a._id), a]));
+
+    const juegos = await Juego.find();
+    const ops = juegos.map((j) => {
+      const k = String(j._id);
+      const entry = map.get(k);
+      const update = entry
+        ? { avgRating: Number(entry.avg.toFixed(2)), reviewCount: entry.count }
+        : { avgRating: 0, reviewCount: 0 };
+      return {
+        updateOne: {
+          filter: { _id: j._id },
+          update,
+        },
+      };
+    });
+
+    if (ops.length > 0) {
+      await Juego.bulkWrite(ops);
+    }
+
+    const result = juegos.map((j) => ({
+      id: j._id,
+      titulo: j.titulo,
+      avgRating: map.get(String(j._id))
+        ? Number(map.get(String(j._id)).avg.toFixed(2))
+        : 0,
+      reviewCount: map.get(String(j._id))?.count || 0,
+    }));
+
+    res.json({ message: "Ratings recalculados", juegos: result });
+  } catch (error) {
+    console.error("Error al recalcular ratings:", error);
+    res.status(500).json({ message: "Error al recalcular ratings", error: error.message });
+  }
+});
+
 module.exports = router;

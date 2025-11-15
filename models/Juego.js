@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 
 const juegoSchema = new mongoose.Schema({
   titulo: { type: String, required: true },
+  descripcion: { type: String },
+  tipo: { type: String },
   plataforma: { type: String },
   genero: { type: String },
   horasJugadas: { type: Number, default: 0 },

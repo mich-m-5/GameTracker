@@ -52,4 +52,64 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Editar reseña
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { texto, estrellas, usuario } = req.body;
+    const actualizada = await Resena.findByIdAndUpdate(
+      id,
+      { texto, estrellas, usuario },
+      { new: true }
+    );
+
+    if (!actualizada) return res.status(404).json({ message: "Reseña no encontrada" });
+
+    // Recalcular promedio para el juego
+    const juegoId = actualizada.juegoId;
+    const agregacion = await Resena.aggregate([
+      { $match: { juegoId: new mongoose.Types.ObjectId(juegoId) } },
+      { $group: { _id: "$juegoId", avg: { $avg: "$estrellas" }, count: { $sum: 1 } } },
+    ]);
+    if (agregacion.length > 0) {
+      const { avg, count } = agregacion[0];
+      await Juego.findByIdAndUpdate(juegoId, { avgRating: Number(avg.toFixed(2)), reviewCount: count });
+    }
+
+    res.json(actualizada);
+  } catch (error) {
+    console.error("Error al editar reseña:", error);
+    res.status(500).json({ message: "Error al editar reseña", error });
+  }
+});
+
+// Eliminar reseña
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existente = await Resena.findById(id);
+    if (!existente) return res.status(404).json({ message: "Reseña no encontrada" });
+
+    const juegoId = existente.juegoId;
+    await Resena.findByIdAndDelete(id);
+
+    // Recalcular promedio para el juego
+    const agregacion = await Resena.aggregate([
+      { $match: { juegoId: new mongoose.Types.ObjectId(juegoId) } },
+      { $group: { _id: "$juegoId", avg: { $avg: "$estrellas" }, count: { $sum: 1 } } },
+    ]);
+    if (agregacion.length > 0) {
+      const { avg, count } = agregacion[0];
+      await Juego.findByIdAndUpdate(juegoId, { avgRating: Number(avg.toFixed(2)), reviewCount: count });
+    } else {
+      await Juego.findByIdAndUpdate(juegoId, { avgRating: 0, reviewCount: 0 });
+    }
+
+    res.json({ message: "Reseña eliminada" });
+  } catch (error) {
+    console.error("Error al eliminar reseña:", error);
+    res.status(500).json({ message: "Error al eliminar reseña", error });
+  }
+});
+
 module.exports = router;
