@@ -26,6 +26,7 @@ mongoose.connect(process.env.MONGO_URI, {
 app.use("/api/juegos", require("./routes/juegos"));
 app.use("/api/resenas", require("./routes/resenas"));
 
+
 // Puerto de servidor
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Servidor funcionando en puerto ${PORT}`));

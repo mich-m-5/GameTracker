@@ -1,53 +1,48 @@
-// backend/routes/resenas.js
 const express = require("express");
 const router = express.Router();
 const Resena = require("../models/Resena");
-const Juego = require("../models/Juegos");
+const Juego = require("../models/Juego");
+const mongoose = require("mongoose");
 
-// Obtener reseñas (por juego opcional)
+// Obtener reseñas por juegoId
 router.get("/", async (req, res) => {
   try {
-    const { juegoId } = req.query;
-    const filtro = juegoId ? { juegoId } : {};
-    const resenas = await Resena.find(filtro).sort({ fecha: -1 });
+    const { juegoId } = req.query; // viene del frontend
+    if (!juegoId) return res.status(400).json({ message: "Falta juegoId" });
+
+    const resenas = await Resena.find({ juegoId }).sort({ createdAt: -1 });
     res.json(resenas);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener reseñas", error });
   }
 });
 
-// Agregar reseña => además recalcula avgRating y reviewCount del juego
+// Agregar reseña
 router.post("/", async (req, res) => {
   try {
-    const nueva = new Resena(req.body);
-    await nueva.save();
+    const { juegoId, texto, estrellas } = req.body;
 
-    // Recalcular promedio y count
+    if (!juegoId || !texto || estrellas == null) {
+      return res.status(400).json({ message: "Faltan datos" });
+    }
+
+    const nueva = await Resena.create({ juegoId, texto, estrellas });
+
+    // Actualizar promedio y conteo en Juego
     const agregacion = await Resena.aggregate([
-      { $match: { juegoId: nueva.juegoId } },
-      { $group: {
+      { $match: { juegoId: new mongoose.Types.ObjectId(juegoId) } },
+      {
+        $group: {
           _id: "$juegoId",
           avg: { $avg: "$estrellas" },
           count: { $sum: 1 }
-      } }])
-      // Después de guardar una nueva reseña
-      const nuevaResena = await Reseña.create(req.body);
-    //  🔄 Recalcular el promedio de estrellas
-      const resenasJuego = await Reseña.find({ juego: req.body.juego });
-      const promedio =
-      resenasJuego.reduce((acc, r) => acc + r.estrellas, 0) / resenasJuego.length;
-
-      await Juego.findByIdAndUpdate(req.body.juego, { promedioEstrellas: promedio });
-
-      res.json(nuevaResena);
-
+        }
+      }
+    ]);
 
     if (agregacion.length > 0) {
       const { avg, count } = agregacion[0];
-      await Juego.findByIdAndUpdate(nueva.juegoId, {
-        avgRating: Number(avg.toFixed(2)),
-        reviewCount: count
-      });
+      await Juego.findByIdAndUpdate(juegoId, { avgRating: Number(avg.toFixed(2)), reviewCount: count });
     }
 
     res.status(201).json(nueva);
